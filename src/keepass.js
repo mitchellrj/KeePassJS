@@ -1,2 +1,5 @@
-struct = new JSPack();
-KeePass = {};
+(function () {
+    "use strict";
+    window.struct = new JSPack();
+    window.KeePass = {};
+}());
