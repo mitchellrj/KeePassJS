@@ -122,7 +122,12 @@
             });
         } else if (algorithm === C.ALGO_TWOFISH) {
             cipherParams = CryptoJS.lib.CipherParams.create({
-                ciphertext: encryptedPart
+                ciphertext: encryptedPart,
+                key: finalKey,
+                mode: CryptoJS.mode.CBC,
+                iv: this.encryptionIV,
+                padding: CryptoJS.pad.Pkcs7,
+                algorithm: CryptoJS.algo.TwoFish
             });
             decryptedPart = CryptoJS.TwoFish.decrypt(cipherParams,
             finalKey, {
