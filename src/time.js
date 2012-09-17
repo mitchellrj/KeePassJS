@@ -1,4 +1,4 @@
-(function() {
+(function () {
     "use strict";
 
     var KeePass = window.KeePass = window.KeePass || {};
@@ -22,10 +22,10 @@
     KeePass.Time.serializeTime = function (date) {
         var year = date.getFullYear(),
             month = date.getMonth(),
-    	day = date.getDay(),
-    	hour = date.getHours(),
-    	minute = date.getMinutes(),
-    	second = date.getSeconds();
+            day = date.getDay(),
+            hour = date.getHours(),
+            minute = date.getMinutes(),
+            second = date.getSeconds();
 
         return [
             (year >> 6) & 0x3f,
