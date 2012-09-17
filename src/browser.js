@@ -66,7 +66,7 @@
         });
 
         function createEntry(entry) {
-            var entryMarkup = $('<tr><td><a href="' + entry.url + '">'+ entry.title + '</a></td><td>' + entry.userName + '</td><td class="password masked">' + (new Array(entry.password.length)).join('*') + '</td><td>' + entry.additional + '</td></tr>');
+            var entryMarkup = $('<tr><td><a href="' + entry.url + '">'+ entry.title + '</a></td><td>' + entry.userName + '</td><td class="password masked">' + (new Array(entry.password.length)).join('*') + '</td><td><pre>' + entry.additional + '</pre></td></tr>');
 	    entryMarkup.find('.password').click(function() {
 		var $this = $(this);
                 if ($this.hasClass('masked')) {
