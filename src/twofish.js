@@ -47,46 +47,43 @@
         blk[0] = rotw(blk[0], 1) ^ (a + b + keySchedule[4 * i + 8]) & wMax;
         blk[1] = rotw(blk[1] ^ (a + 2 * b + keySchedule[4 * i + 9]) & wMax, 31);
     }
-    function getWord(a, i) {
-        return a[i] | a[i + 1] << 8 | a[i + 2] << 16 | a[i + 3] << 24;
-    }
-    function setWord(w) {
-	return w & 0xFF + (w >>> 8) & 0xFF + (w >>> 16) & 0xFF + (w >>> 24) & 0xFF;
-    }
 
     function encryptBlock(M, offset, keySchedule, m) {
-        var blk = [getWord(bData) ^ keySchedule[0], getWord(bData) ^ keySchedule[1], getWord(bData) ^ keySchedule[2], getWord(bData) ^ keySchedule[3]];
+        var blk = [
+            M[offset] ^ keySchedule[0],
+            M[offset + 1] ^ keySchedule[1],
+            M[offset + 2] ^ keySchedule[2],
+            M[offset + 3] ^ keySchedule[3]];
         for (var j = 0; j < 8; j++) {
-            frnd(j, blk, key);
+            frnd(j, blk, keySchedule, m);
         }
-        setWord(bData, i, blk[2] ^ keySchedule[4]);
-        setWord(bData, i + 4, blk[3] ^ keySchedule[5]);
-        setWord(bData, i + 8, blk[0] ^ keySchedule[6]);
-        setWord(bData, i + 12, blk[1] ^ keySchedule[7]);
-        i += 16;
+        M[offset] = blk[2] ^ keySchedule[4];
+        M[offset + 1] = blk[3] ^ keySchedule[5];
+        M[offset + 2] = blk[0] ^ keySchedule[6];
+        M[offset + 3] = blk[1] ^ keySchedule[7];
     }
 
     function decryptBlock(M, offset, keySchedule, m) {
-	var j;
-        M[0 + offset] ^= keySchedule[4];
-        M[1 + offset] ^= keySchedule[5];
-        M[2 + offset] ^= keySchedule[6];
-        M[3 + offset] ^= keySchedule[7];
+	var j, blk = [
+            M[offset] ^ keySchedule[4],
+            M[1 + offset] ^ keySchedule[5],
+            M[2 + offset] ^ keySchedule[6],
+            M[3 + offset] ^ keySchedule[7]
+        ];
         for (j = 7; j >= 0; j--) {
-            irnd(j, M, key);
+            irnd(j, blk, keySchedule, m);
         }
-        M[offset] = setWord(M[2] ^ keySchedule[0]);
-	M[offset + 1] = setWord(M[3] ^ keySchedule[1]);
-	M[offset + 2] = setWord(M[0] ^ keySchedule[2]);
-	M[offset + 3] = setWord(M[1] ^ keySchedule[3]);
+        M[offset] = blk[2] ^ keySchedule[0];
+	M[offset + 1] = blk[3] ^ keySchedule[1];
+	M[offset + 2] = blk[0] ^ keySchedule[2];
+	M[offset + 3] = blk[1] ^ keySchedule[3];
     }
 
     var TwoFish = C_algo.TwoFish = BlockCipher.extend({
         _doReset: function() {
-            var key = this._key;
+            var inKey = this._key.words;
             var i, a, b, c, d, meKey = [],
                 moKey = [],
-                inKey = [],
                 kLen,
                 sKey = [],
                 keySchedule = [],
@@ -183,13 +180,6 @@
                 return m[0][a] ^ m[1][b] ^ m[2][c] ^ m[3][d];
             }
 
-            key = key.slice(0, 32);
-            i = key.length;
-            while (i != 16 && i != 24 && i != 32) key[i++] = 0;
-
-            for (i = 0; i < key.length; i += 4) {
-                inKey[i >> 2] = getWord(key, i);
-            }
             for (i = 0; i < 256; i++) {
                 q[0][i] = qp(0, i);
                 q[1][i] = qp(1, i);
@@ -248,10 +238,10 @@
             this.m = m;
         },
         decryptBlock: function (M, offset) {
-            tfsDecrypt(M, offset, this.keySchedule, this.m);
+            decryptBlock(M, offset, this.keySchedule, this.m);
         },
         encryptBlock: function (M, offset) {
-            tfsEncrypt(M, offset, this.keySchedule, this.m);
+            encryptBlock(M, offset, this.keySchedule, this.m);
         }
     });
 
@@ -260,8 +250,8 @@
     *
     * @example
     *
-    *     var ciphertext = CryptoJS.AES.encrypt(message, key, cfg);
-    *     var plaintext  = CryptoJS.AES.decrypt(ciphertext, key, cfg);
+    *     var ciphertext = CryptoJS.TwoFish.encrypt(message, key, cfg);
+    *     var plaintext  = CryptoJS.TwoFish.decrypt(ciphertext, key, cfg);
     */
    C.TwoFish = BlockCipher._createHelper(TwoFish);
 
