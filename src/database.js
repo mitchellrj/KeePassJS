@@ -71,13 +71,18 @@ Database.prototype.read = function(data) {
         throw "Invalid file signature";
     }
     if ((this.version & 0xFFFFFF00) != (PWM_DBVER_DW & 0xFFFFFF00)) {
+	// Design decision: I'm not going to support this antiquated crap.
+	// the chances of anyone having these old versions and this being the
+	// first time they open them in a modern version of KeePass is tiny.
+	/*
         if (this.version == 0x00020000 || this.version == 0x00020001 || this.version == 0x00020002) {
             return this.openDatabaseV2(data);
         } else if (this.version <= 0x00010002) {
             return this.openDatabaseV1(data);
         } else {
             throw "Failed to open database.";
-        }
+        }*/
+	throw "Unsupported file version.";
     }
 
     if (groupCount == 0) {
@@ -208,12 +213,4 @@ Database.prototype.read = function(data) {
 
         pos += fieldSize;
     }
-};
-
-Database.prototype.openDatabaseV1 = function(data) {
-
-};
-
-Database.prototype.openDatabaseV2 = function(data) {
-
 };
