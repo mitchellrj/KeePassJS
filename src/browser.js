@@ -1,5 +1,10 @@
+/*jslint unparam: true, white: true, browser: true */
+/*global FileReader: true, File: true, alert: true, jQuery: true */
+
 (function ($) {
     "use strict";
+    var KeePass = window.KeePass;
+
     $(function () {
         var opening = false;
 
@@ -8,7 +13,7 @@
                 fileArray = [],
                 i;
 
-            if (files.length != 1) {
+            if (files.length !== 1) {
                 return false;
             }
             for (i = 0; i < files.length; i += 1) {
@@ -63,14 +68,23 @@
             return false;
         });
 
+        function pwMask(len) {
+            /* Could also be done by (new Array(len)).join('*');, but lint no likey. */
+            var result = '', i;
+            for (i = 0; i < len; i += 1) {
+                result += '*';
+            }
+            return result;
+        }
+
         function createEntry(entry) {
-            var entryMarkup = $('<tr><td><a href="' + entry.url + '">' + entry.title + '</a></td><td>' + entry.userName + '</td><td class="password masked">' + (new Array(entry.password.length)).join('*') + '</td><td><pre>' + entry.additional + '</pre></td></tr>');
+            var entryMarkup = $('<tr><td><a href="' + entry.url + '">' + entry.title + '</a></td><td>' + entry.userName + '</td><td class="password masked">' + pwMask(entry.password.length) + '</td><td><pre>' + entry.additional + '</pre></td></tr>');
             entryMarkup.find('.password').click(function () {
                 var $this = $(this);
                 if ($this.hasClass('masked')) {
                     $this.text(entry.password);
                 } else {
-                    $this.text((new Array(entry.password.length)).join('*'));
+                    $this.text(pwMask(entry.password.length));
                 }
                 $this.toggleClass('masked');
             });
@@ -88,7 +102,6 @@
                 entriesContainer = $('<table class="entries"><thead><tr><th>Title</th><th>Username</th><th>Password</th><th>Notes</th></tr></thead></table>');
 
                 for (e in groups[g].entries) {
-                    entry = groups[g].entries[e];
                     if (groups[g].entries.hasOwnProperty(e) && e.length) {
                         entry = groups[g].entries[e];
                         entryMarkup = createEntry(entry);
@@ -112,7 +125,7 @@
 
         function process() {
             var key = $('#password').val(),
-                diskDrive = !! $('#use_keyfile:checked').length,
+                diskDrive = !!$('#use_keyfile:checked').length,
                 providerName = 'KeePassJS',
                 manager = new KeePass.Manager();
 
@@ -141,8 +154,8 @@
             }
 
             if (diskDrive) {
-                readFiles($('#keyfile').get(0).files, function (file) {
-                    loadFile(keyfile);
+                readFiles($('#keyfile').get(0).files, function (keyfile) {
+                    loadWithKeyFile(keyfile);
                 });
             } else {
                 loadWithKeyFile(null);

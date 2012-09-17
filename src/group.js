@@ -1,9 +1,10 @@
+/*jslint browser: true */
+/*global struct: true */
 (function () {
     "use strict";
 
-    var KeePass = window.KeePass = window.KeePass || {};
-
-    var readTime = KeePass.Time.readTime,
+    var KeePass = window.KeePass = window.KeePass || {},
+        readTime = KeePass.Time.readTime,
         Group = KeePass.Group = function (initStructure) {
             var k = null;
             this.database = null;
@@ -31,7 +32,7 @@
         var fmt;
         switch (fieldType) {
         case 0x0000:
-            this.database.extData.read(data, fieldSize, this, null, pos);
+            this.database.extData.read(decryptedPart, fieldSize, this, null, pos);
             break;
         case 0x0001:
             this.id = struct.Unpack('<I', decryptedPart, pos)[0];
@@ -62,9 +63,10 @@
             this.flags = struct.Unpack('<I', decryptedPart, pos)[0];
             break;
         case 0xFFFF:
-            if (fieldSize != 0) {
+            if (fieldSize !== 0) {
                 throw "";
             }
+            break;
         }
     };
 

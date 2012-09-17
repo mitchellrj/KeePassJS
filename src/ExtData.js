@@ -1,10 +1,11 @@
+/*jslint unparam: true, white: true, browser: true */
+/*global struct: true */
 (function () {
-
-    var KeePass = window.KeePass = window.KeePass || {};
-
+    "use strict";
     // Random data to pad the file out to prevent guessing attacks
 
-    var ExtData = KeePass.ExtData = function (headerHash) {
+    var KeePass = window.KeePass = window.KeePass || {},
+        ExtData = KeePass.ExtData = function (headerHash) {
         this.headerHash = headerHash;
     };
 
@@ -31,8 +32,8 @@
                 // Ignore field
                 break;
             case 0x0001:
-                if (fieldSize == this.headerHash.length) {
-                    result = this.headerHash == fieldData;
+                if (fieldSize === this.headerHash.length) {
+                    result = this.headerHash === fieldData;
                 }
                 break;
             case 0x0002:
@@ -43,7 +44,6 @@
                 break;
             default:
                 throw "";
-                break;
             }
             if (!result) {
                 throw "";

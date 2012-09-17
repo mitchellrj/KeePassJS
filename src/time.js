@@ -1,3 +1,5 @@
+/*jslint bitwise: true, white: true, browser: true */
+
 (function () {
     "use strict";
 

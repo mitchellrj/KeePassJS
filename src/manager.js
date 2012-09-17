@@ -1,27 +1,29 @@
+/*jslint nomen: true, white: true, browser: true */
+/*global CryptoJS: true, Base64: true */
 (function () {
     "use strict";
 
     var KeePass = window.KeePass = window.KeePass || {},
+        U = KeePass.utils || {},
         Database = KeePass.Database,
-        isBase64UrlString = (new RegExp('^base64:\/\/')).test;
-
-    function loadHexKey(string) {
-        var i, result = [];
-        for (i = 0; i < 32; i += 2) {
-            result.push(parseInt(string.slice(i, 2), 16));
-        }
-        return byteArrayToWordArray(result);
-    }
-
-    var C = KeePass.constants || {},
+        isBase64UrlString = (new RegExp('^base64:\/\/')).test,
+        C = KeePass.constants || {},
         Manager = KeePass.Manager = function () {
         this.masterKey = '';
         this.keySource = '';
         this.database = null;
     };
 
+    function loadHexKey(string) {
+        var i, result = [];
+        for (i = 0; i < 32; i += 2) {
+            result.push(parseInt(string.slice(i, 2), 16));
+        }
+        return U.byteArrayToWordArray(result);
+    }
+
     Manager.prototype.setMasterKey = function (key, diskDrive, keyFile, providerName) {
-        var fileSize, fileKey = '',
+        var fileSize, fileKey = '', fileData,
             passwordKey, readNormal, extKey, keySourceCand;
 
         if (key.length === 0) {
@@ -30,7 +32,6 @@
 
         if (!diskDrive) {
             this.masterKey = CryptoJS.SHA256(CryptoJS.enc.Latin1.parse(key));
-            return;
         } else if (isBase64UrlString(keyFile.name)) {
             extKey = Base64.decode(keyFile.name.slice(9));
             if (extKey) {
@@ -39,23 +40,21 @@
                 throw "Invalid key";
             }
 
-            if (providerName != null) {
+            if (providerName !== null && providerName !== undefined) {
                 this.keySource = providerName;
             }
 
-            if (key == null) { // external source only
+            if (key === null) { // external source only
                 this.masterKey = fileKey;
-                return;
             } else {
                 passwordKey = CryptoJS.SHA256(key);
                 this.masterKey = CryptoJS.SHA256(passwordKey.concat(fileKey));
-                return;
             }
         } else {
             // with key file
-            if (key == null) { // key file only
+            if (key === null) { // key file only
                 keySourceCand = keyFile.name;
-                if (keySourceCand.charAt(keySourceCand.length - 1) == '\\') {
+                if (keySourceCand.charAt(keySourceCand.length - 1) === '\\') {
                     keySourceCand += C.PWS_DEFAULT_KEY_FILENAME;
                 }
                 fileData = keyFile.data;
@@ -75,7 +74,7 @@
                 this.keySource = keySourceCand;
             } else { // secondKey != null
                 keySourceCand = keyFile.name;
-                if (keySourceCand.charAt(keySourceCand.length - 1) == '\\') {
+                if (keySourceCand.charAt(keySourceCand.length - 1) === '\\') {
                     keySourceCand += C.PWS_DEFAULT_KEY_FILENAME;
                 }
                 fileData = keyFile.data;
@@ -96,7 +95,6 @@
 
                 passwordKey = CryptoJS.SHA256(key);
                 this.masterKey = CryptoJS.SHA256(passwordKey.concat(fileKey));
-                return;
             }
         }
     };

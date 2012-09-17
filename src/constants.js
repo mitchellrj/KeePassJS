@@ -1,8 +1,9 @@
+/*jslint browser: true */
 (function () {
     "use strict";
 
-    var KeePass = window.KeePass = window.KeePass || {};
-    var C = KeePass.constants = KeePass.constants || {};
+    var KeePass = window.KeePass = window.KeePass || {},
+        C = KeePass.constants = KeePass.constants || {};
 
     //Database file signature bytes
     C.PWM_DBSIG_1 = 0x9AA2D903;
