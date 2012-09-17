@@ -1,1 +1,2 @@
 struct = new JSPack();
+KeePass = {};

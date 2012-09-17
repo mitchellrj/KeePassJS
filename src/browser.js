@@ -32,11 +32,6 @@
             doRead(fileArray);
 	}
 
-	window.task = function (name, percentage) {
-	    $('#progressbar').progressbar({value: percentage});
-	    $('#progressmessage').text(name + ' - ' + percentage.toString() + '%');
-	};
-
         $('body').bind('dragenter', function (ev) {
             $(this).css('background-color', '#f00');
             ev.preventDefault();
@@ -115,7 +110,7 @@
             var key = $('#password').val(),
                 diskDrive = !!$('#use_keyfile:checked').length,
                 providerName = 'KeePassJS',
-                manager = new Manager();
+                manager = new KeePass.Manager();
 
             if (opening) {
         	return;
