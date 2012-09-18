@@ -91,6 +91,13 @@
             return entryMarkup;
         }
 
+        function doNotDisplay(entry) {
+            return !(entry.title==='Meta-Info' &&
+        	     entry.userName==='SYSTEM' &&
+        	     entry.url==='$' &&
+        	     entry.additional==="KPX_GROUP_TREE_STATE");
+        }
+
         function createSubGroups(groups, container) {
             var g, e = null,
                 l = $('<ul class="groups"></ul>'),
@@ -102,7 +109,7 @@
                 entriesContainer = $('<table class="entries"><thead><tr><th>Title</th><th>Username</th><th>Password</th><th>Notes</th></tr></thead></table>');
 
                 for (e in groups[g].entries) {
-                    if (groups[g].entries.hasOwnProperty(e) && e.length) {
+                    if (groups[g].entries.hasOwnProperty(e) && !doNotDisplay(groups[g].entries[e])) {
                         entry = groups[g].entries[e];
                         entryMarkup = createEntry(entry);
                         entriesContainer.append(entryMarkup);
@@ -132,6 +139,7 @@
             if (opening) {
                 return;
             }
+            $('#results').empty();
             opening = true;
 
             function loadWithKeyFile(keyFile) {
