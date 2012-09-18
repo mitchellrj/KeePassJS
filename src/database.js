@@ -121,7 +121,6 @@
 
         if (algorithm === C.ALGO_AES) {
             // Decrypt! The first bytes aren't encrypted (that's the header)
-            // TODO: something seems to go wrong in the last 4 bytes.
             cipherParams = CryptoJS.lib.CipherParams.create({
                 ciphertext: encryptedPart,
                 key: finalKey,
@@ -161,7 +160,8 @@
 
         decryptedPartByteArray = U.wordArrayToByteArray(decryptedPart);
 
-        /* TODO: enable this again once decryption fixed
+        /* TODO: something seems to go wrong in the last 4 bytes of
+         * decryption. Enable this again once decryption fixed.
          * if (contentsHash != CryptoJS.SHA256(decryptedPart)) {
             throw "Invalid key.";
         }*/
