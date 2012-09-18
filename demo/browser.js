@@ -113,10 +113,10 @@
         }
 
         function doNotDisplay(entry) {
-            return !(entry.title==='Meta-Info' &&
-        	     entry.userName==='SYSTEM' &&
-        	     entry.url==='$' &&
-        	     entry.additional==="KPX_GROUP_TREE_STATE");
+            return (entry.title==='Meta-Info' &&
+        	    entry.userName==='SYSTEM' &&
+        	    entry.url==='$' &&
+        	    entry.additional==="KPX_GROUP_TREE_STATE");
         }
 
         function createSubGroups(groups, container) {
