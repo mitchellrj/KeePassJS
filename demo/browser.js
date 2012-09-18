@@ -75,7 +75,8 @@
 
         function createEntry(entry) {
             var entryMarkup = $('<tr><td class="title"><a href="' + entry.url + '">' + entry.title + '</a></td><td class="userName">' + entry.userName + '</td><td class="password"><span>' + pwMask(entry.password.length) + '</span>' + passwordToggle + '</td><td class="notes"><pre>' + entry.additional + '</pre></td></tr>');
-            entryMarkup.find('.password-toggle').click(function () {
+            entryMarkup.find('.password-toggle').click(function (ev) {
+        	ev.preventDefault();
                 var $this = $(this),
                     $field = $this.parent();
                 if ($this.hasClass('hidden')) {
