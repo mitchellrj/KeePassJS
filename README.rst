@@ -13,3 +13,10 @@ http://www.keepassdroid.com/
 Because this is based on a GPL implementation, it must itself be GPL.
 I have tried to release as much code as possible under more permissive
 licenses, as described in the LICENSE file.
+
+Usage
+=====
+
+Try cloning this repository and opening the demo/index.html in your
+favourite, modern browser. Then add your KeePass file, enter your
+password and wait for your entries to be shown to you.
