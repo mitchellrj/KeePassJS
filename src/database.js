@@ -127,7 +127,7 @@
                 mode: CryptoJS.mode.CBC,
                 iv: this.encryptionIV,
                 padding: CryptoJS.pad.Pkcs7,
-                algorithm: CryptoJS.algo.TwoFish
+                algorithm: CryptoJS.algo.AES
             });
             decryptedPart = CryptoJS.TwoFish.decrypt(cipherParams,
             finalKey, {
