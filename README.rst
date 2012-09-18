@@ -27,3 +27,7 @@ Limitations
 Does not support version 0.1 or 0.2 KDB files. If you wish to open
 these files with KeePassJS, open them in a native application first
 and save them, so that they may be converted to a newer file format.
+
+Editing, creation and repair of files is not currently supported and
+cases for their use in the browser are limited, so I do not plan to
+implement them in the near future.
