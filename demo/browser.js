@@ -162,6 +162,7 @@
             }
             $('#results').empty();
             opening = true;
+            $('#spinner').show();
 
             function loadWithKeyFile(keyFile) {
                 readFiles($('#keepassfile').get(0).files, function (file) {
@@ -177,6 +178,7 @@
                     } catch (e) {
                         alert(e);
                     } finally {
+                        $('#spinner').hide();
                         opening = false;
                     }
                 });
