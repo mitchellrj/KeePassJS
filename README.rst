@@ -31,3 +31,11 @@ and save them, so that they may be converted to a newer file format.
 Editing, creation and repair of files is not currently supported and
 cases for their use in the browser are limited, so I do not plan to
 implement them in the near future.
+
+Paranoia
+========
+
+I understand some users will have doubts about giving their file and
+password to the browser. If you are concerned, try running the browser
+in offline mode. At the end of the day, you just have to trust the
+developer, as you would do with any other implementation of KeePass.
