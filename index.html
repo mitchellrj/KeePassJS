@@ -21,9 +21,10 @@ CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 -->
-<html>
+<html manifest="https://raw.github.com/mitchellrj/KeePassJS/master/demo/cache.manifest">
 <head>
 <title>KeePassJS</title>
+<link rel="stylesheet" type="text/css" href="https://raw.github.com/mitchellrj/KeePassJS/master/demo/stylesheet.css" />
 <script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/lib/cryptojs/core.js"></script>
 <script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/lib/cryptojs/md5.js"></script>
 <script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/lib/cryptojs/evpkdf.js"></script>
@@ -37,6 +38,8 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 <script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/src/keepass.js"></script>
 <script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/src/constants.js"></script>
+<script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/utils/strings.js"></script>
+<script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/utils/events.js"></script>
 <script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/utils/utils.js"></script>
 <script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/src/time.js"></script>
 <script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/src/ExtData.js"></script>
@@ -50,27 +53,40 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 <script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/demo/browser.js"></script>
 </head>
 <body>
-<form action="#" id="keepassform">
+<div id="wrapper">
+<form action="#" id="keepassopenform">
+<div id="errors"></div>
 <div class="field">
 	<label for="keepassfile">KeePass file</label>
 	<input type="file" id="keepassfile" name="keepassfile" />
 </div>
 <div class="field">
 	<label for="password">Password</label>
-	<input type="checkbox" name="use_password" id="use_password" checked/>
 	<input type="password" id="password" name="password" />
+	<label for="use_password" class="implied">Use password?</label>
+	<input type="checkbox" name="use_password" id="use_password" checked/>
 </div>
 <div class="field">
 	<label for="keyfile">Key file</label>
-	<input type="checkbox" name="use_keyfile" id="use_keyfile"/>
 	<input type="file" id="keyfile" name="keyfile" />
+	<label for="use_keyfile" class="implied">Use key file?</label>
+	<input type="checkbox" name="use_keyfile" id="use_keyfile"/>
 </div>
-<div class="field">
-    <input type="button" id="open" name="open" value="Open"/>
-    <img id="spinner" src="https://raw.github.com/mitchellrj/KeePassJS/master/demo/spinner.gif" style="display:none;" />
-</div>
-<div id="results">
+<div class="field buttons">
+    <div id="status">
+        <img src="spinner.gif" />
+        <p></p>
+        <progress value="0" max="100">0%</progress>
+    </div>
+    <button id="open">Open</button>
+    <div class="clearer"></div>
 </div>
 </form>
+<div id="db-contents-wrapper">
+<a id="close" href="#close">Close</a>
+<div id="db-contents">
+</div>
+</div>
+</div>
 </body>
 </html>
