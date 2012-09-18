@@ -1,0 +1,76 @@
+<!doctype html>
+<!--
+Copyright (C) 2012 Richard Mitchell
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+-->
+<html>
+<head>
+<title>KeePassJS</title>
+<script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/lib/cryptojs/core.js"></script>
+<script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/lib/cryptojs/md5.js"></script>
+<script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/lib/cryptojs/evpkdf.js"></script>
+<script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/lib/cryptojs/cipher-core.js"></script>
+<script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/lib/cryptojs/aes.js"></script>
+<script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/lib/cryptojs/mode-ecb.js"></script>
+<script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/lib/cryptojs/sha256.js"></script>
+<script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/lib/base64.js"></script>
+<script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/lib/jspack.js"></script>
+<script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/bouncycastle/twofish.js"></script>
+
+<script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/src/keepass.js"></script>
+<script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/src/constants.js"></script>
+<script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/utils/utils.js"></script>
+<script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/src/time.js"></script>
+<script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/src/ExtData.js"></script>
+<script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/src/entry.js"></script>
+<script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/src/group.js"></script>
+<script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/src/database.js"></script>
+<script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/src/manager.js"></script>
+
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.8.1/jquery.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.8.23/jquery-ui.min.js"></script>
+<script type="text/javascript" src="https://raw.github.com/mitchellrj/KeePassJS/master/demo/browser.js"></script>
+</head>
+<body>
+<form action="#" id="keepassform">
+<div class="field">
+	<label for="keepassfile">KeePass file</label>
+	<input type="file" id="keepassfile" name="keepassfile" />
+</div>
+<div class="field">
+	<label for="password">Password</label>
+	<input type="checkbox" name="use_password" id="use_password" checked/>
+	<input type="password" id="password" name="password" />
+</div>
+<div class="field">
+	<label for="keyfile">Key file</label>
+	<input type="checkbox" name="use_keyfile" id="use_keyfile"/>
+	<input type="file" id="keyfile" name="keyfile" />
+</div>
+<div class="field">
+    <input type="button" id="open" name="open" value="Open"/>
+    <img id="spinner" src="https://raw.github.com/mitchellrj/KeePassJS/master/demo/spinner.gif" style="display:none;" />
+</div>
+<div id="results">
+</div>
+</form>
+</body>
+</html>
