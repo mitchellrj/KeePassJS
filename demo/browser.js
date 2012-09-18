@@ -24,10 +24,13 @@
 /*global FileReader: true, File: true, alert: true, jQuery: true */
 (function ($) {
     "use strict";
-    var KeePass = window.KeePass;
+    var KeePass = window.KeePass,
+        PERCENT_RE = /\b(\d{1,3})%/,
+        droppedFiles = [];
 
     $(function () {
-        var opening = false;
+        var opening = false,
+            passwordToggle = '<a href="#" class="password-toggle hidden">Show password</a>';
 
         function readFiles(files, callback) {
             var reader = new FileReader(),
@@ -61,34 +64,6 @@
             doRead(fileArray);
         }
 
-        $('body').bind('dragenter', function (ev) {
-            $(this).css('background-color', '#f00');
-            ev.preventDefault();
-            ev.stopPropagation();
-            return false;
-        });
-        $('body').bind('dragleave', function (ev) {
-            $(this).css('background-color', '#fff');
-            ev.preventDefault();
-            ev.stopPropagation();
-            return false;
-        });
-        $('body').bind('dragover', function (ev) {
-            ev.preventDefault();
-            ev.stopPropagation();
-            return false;
-        });
-
-        $('body').bind('drop', function (ev) {
-            ev.preventDefault();
-            ev.stopPropagation();
-            $(this).css('background-color', '#fff');
-
-            document.getElementById('keepassfile').files = ev.originalEvent.dataTransfer.files;
-
-            return false;
-        });
-
         function pwMask(len) {
             /* Could also be done by (new Array(len)).join('*');, but lint no likey. */
             var result = '', i;
@@ -99,15 +74,20 @@
         }
 
         function createEntry(entry) {
-            var entryMarkup = $('<tr><td><a href="' + entry.url + '">' + entry.title + '</a></td><td>' + entry.userName + '</td><td class="password masked">' + pwMask(entry.password.length) + '</td><td><pre>' + entry.additional + '</pre></td></tr>');
-            entryMarkup.find('.password').click(function () {
-                var $this = $(this);
-                if ($this.hasClass('masked')) {
-                    $this.text(entry.password);
+            var entryMarkup = $('<tr><td class="title"><a href="' + entry.url + '">' + entry.title + '</a></td><td class="userName">' + entry.userName + '</td><td class="password"><span>' + pwMask(entry.password.length) + '</span>' + passwordToggle + '</td><td class="notes"><pre>' + entry.additional + '</pre></td></tr>');
+            entryMarkup.find('.password-toggle').click(function () {
+                var $this = $(this),
+                    $field = $this.parent();
+                if ($this.hasClass('hidden')) {
+                    $this.text('Hide password');
+                    $field.find('span').hide();
+                    $field.prepend($('<input type="text" value="' + entry.password + '"/>'));
                 } else {
-                    $this.text(pwMask(entry.password.length));
+                    $this.text('Show password');
+                    $field.find('span').show();
+                    $field.find('input').remove();
                 }
-                $this.toggleClass('masked');
+                $this.toggleClass('hidden');
             });
             return entryMarkup;
         }
@@ -126,8 +106,8 @@
 
             container.append(l);
             for (g = 0; g < groups.length; g += 1) {
-                groupMarkup = $('<li><span class="group-name">' + groups[g].name + '</span></li>');
-                entriesContainer = $('<table class="entries"><thead><tr><th>Title</th><th>Username</th><th>Password</th><th>Notes</th></tr></thead></table>');
+                groupMarkup = $('<li><a class="group-name" href="#">' + groups[g].name + '</a></li>');
+                entriesContainer = $('<table class="entries"><thead><tr><th class="title">Title</th><th class="userName">Username</th><th class="password">Password</th><th class="notes">Notes</th></tr></thead></table>');
 
                 for (e in groups[g].entries) {
                     if (groups[g].entries.hasOwnProperty(e) && !doNotDisplay(groups[g].entries[e])) {
@@ -136,7 +116,6 @@
                         entriesContainer.append(entryMarkup);
                     }
                 }
-
                 groupMarkup.append(entriesContainer);
                 l.append(groupMarkup);
 
@@ -144,43 +123,84 @@
             }
         }
 
-        function opened(manager) {
-            var container = $('#results'),
+        function opened(e) {
+            var container = $('#db-contents'),
+                manager = e.manager,
                 groups = manager.database.subGroups;
 
+            $('#open').removeAttr('disabled');
+            $('#spinner').hide();
+            opening = false;
+
             createSubGroups(groups, container);
+            $('#keepassopenform').hide();
+            $('#db-contents-wrapper').show();
+        }
+
+        document.addEventListener('keePassDatabaseOpen', opened);
+
+        function openFailed(e) {
+            var manager = e.manager,
+                message = e.exception,
+                $errors = $('#errors');
+
+            $('#spinner').hide();
+            opening = false;
+
+            manager.status(null);
+            $('#open').removeAttr('disabled');
+            $errors.text(message);
+            $errors.slideDown();
+        }
+
+        document.addEventListener('keePassDatabaseOpenError', openFailed);
+
+        function statusCallback(msg) {
+            var $status = $('#status'),
+                $message = $status.find('p'),
+                $progress = $status.find('progress'),
+                $spinner = $status.find('img'),
+                percentage;
+            if (msg===null) {
+        	$message.hide();
+    	        $progress.hide();
+	        $spinner.hide();
+            } else {
+        	percentage = PERCENT_RE.test(msg) ? PERCENT_RE.exec(msg)[1] : null;
+        	if (percentage !== null) {
+        	    $progress.attr('value', percentage);
+        	    $progress.text(percentage + '%');
+        	    $spinner.hide();
+        	    $progress.show();
+        	} else {
+        	    $progress.hide();
+        	    $spinner.show();
+        	}
+        	$message.text(msg);
+        	$message.show();
+            }
         }
 
         function process() {
             var key = $('#password').val(),
                 diskDrive = !!$('#use_keyfile:checked').length,
                 providerName = 'KeePassJS',
-                manager = new KeePass.Manager();
+                manager = new KeePass.Manager(statusCallback);
 
             if (opening) {
                 return;
             }
-            $('#results').empty();
             opening = true;
-            $('#spinner').show();
+            $('#open').attr('disabled', 'disabled');
 
             function loadWithKeyFile(keyFile) {
                 readFiles($('#keepassfile').get(0).files, function (file) {
-                    try {
-                        manager.setMasterKey(
-                        key,
-                        diskDrive,
-                        keyFile,
-                        providerName);
-                        manager.open(file.data);
-
-                        opened(manager);
-                    } catch (e) {
-                        alert(e);
-                    } finally {
-                        $('#spinner').hide();
-                        opening = false;
-                    }
+                    manager.setMasterKey(
+                    key,
+                    diskDrive,
+                    keyFile,
+                    providerName);
+                    manager.open(file.data);
                 });
             }
 
@@ -193,10 +213,28 @@
             }
         }
 
-        $('#open').bind('click', process);
-        $('#keepassform').bind('submit', function (ev) {
+        $('#open').bind('click', function (ev) {
             ev.preventDefault();
             process();
+        });
+        $('#keepassopenform').bind('submit', function (ev) {
+            ev.preventDefault();
+            process();
+        });
+
+        $('#db-contents').on('click', 'a.group-name', function (ev) {
+            ev.preventDefault();
+            $('#db-contents table').hide();
+            $(this).parent().children('table').show();
+        });
+
+        $('#close').bind('click', function (ev) {
+            ev.preventDefault();
+            $('#db-contents').text('');
+            $('#db-contents-wrapper').hide();
+            $('#keepassopenform').show();
+            $("#keepassopenform input:not([type='button'])").each(function() {$(this).val('');});
+            $("#keepassopenform input:first").focus();
         });
     });
 }(jQuery));
