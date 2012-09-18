@@ -80,7 +80,7 @@
             break;
         case 0xFFFF:
             if (fieldSize !== 0) {
-                throw "";
+                throw S.error_unknown_field_type;
             }
             break;
         }

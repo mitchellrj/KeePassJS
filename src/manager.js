@@ -21,13 +21,16 @@
 
     var KeePass = window.KeePass = window.KeePass || {},
         U = KeePass.utils || {},
+        S = KeePass.strings || {},
+        E = KeePass.events || {},
         Database = KeePass.Database,
         isBase64UrlString = (new RegExp('^base64:\/\/')).test,
         C = KeePass.constants || {},
-        Manager = KeePass.Manager = function () {
+        Manager = KeePass.Manager = function (statusCallback) {
         this.masterKey = '';
         this.keySource = '';
         this.database = null;
+        this.statusCallback = statusCallback;
     };
 
     function loadHexKey(string) {
@@ -38,13 +41,25 @@
         return U.byteArrayToWordArray(result);
     }
 
+    Manager.prototype.status = function(message) {
+	var $this = this;
+	if (this.statusCallback) {
+	    // fork
+	    $this.statusCallback(message);
+	    //window.setTimeout(function() {}, 0);
+	}
+    };
+
     Manager.prototype.setMasterKey = function (key, diskDrive, keyFile, providerName) {
         var fileSize, fileKey = '', fileData,
             passwordKey, readNormal, extKey, keySourceCand;
 
         if (key.length === 0) {
-            throw "Invalid key";
+            this.status(null);
+            throw S.error_invalid_key;
         }
+
+        this.status(S.creating_key);
 
         if (!diskDrive) {
             this.masterKey = CryptoJS.SHA256(CryptoJS.enc.Latin1.parse(key));
@@ -53,7 +68,8 @@
             if (extKey) {
                 fileKey = CryptoJS.SHA256(extKey);
             } else {
-                throw "Invalid key";
+                this.status(null);
+                throw S.error_invalid_key;
             }
 
             if (providerName !== null && providerName !== undefined) {
@@ -113,28 +129,53 @@
                 this.masterKey = CryptoJS.SHA256(passwordKey.concat(fileKey));
             }
         }
+        this.status(null);
     };
 
     Manager.prototype.open = function (data) {
-        this.database = new Database(this);
-        this.database.read(data);
+	try {
+	    this.database = new Database(this);
+	    this.database.read(data);
+	} catch (e) {
+	    E.fireDatabaseOpenError(this, e);
+	    throw e;
+	}
     };
 
-    Manager.prototype._transformMasterKey = function (keySeed, keyEncRounds) {
-        var i, transformedMasterKey;
+    Manager.prototype._transformMasterKey = function (keySeed, keyEncRounds, callback) {
+        var lastPercentage = 0, percentage, self = this;
 
-        transformedMasterKey = this.masterKey;
-        for (i = 0; i < keyEncRounds; i += 1) {
+        this.status(S.transforming_key.replace('%d', 0));
+
+        function doRounds(transformedMasterKey, remainingRounds) {
+            var allowUpdate = false;
             transformedMasterKey = CryptoJS.AES.encrypt(transformedMasterKey,
-            keySeed, {
-                mode: CryptoJS.mode.ECB
-            }).ciphertext;
-            transformedMasterKey = CryptoJS.lib.WordArray.create(transformedMasterKey.words.slice(0, 8));
+                    keySeed, {
+                        mode: CryptoJS.mode.ECB
+                    }).ciphertext;
+                    transformedMasterKey = CryptoJS.lib.WordArray.create(transformedMasterKey.words.slice(0, 8));
+                    percentage = Math.round((keyEncRounds - remainingRounds) / keyEncRounds * 100);
+                    if (percentage != lastPercentage) {
+                	allowUpdate = true;
+                        self.status(S.transforming_key.replace('%d', percentage));
+                        lastPercentage = percentage;
+                    }
+            remainingRounds -= 1;
+            if (remainingRounds === 0) {
+                // Hash once with SHA-256
+                transformedMasterKey = CryptoJS.SHA256(transformedMasterKey);
+                self.status(null);
+                callback(transformedMasterKey);
+            } else {
+                if (allowUpdate) {
+                    // timeout to let DOM update
+                    window.setTimeout(function() { doRounds(transformedMasterKey, remainingRounds);}, 0);
+                } else {
+                    doRounds(transformedMasterKey, remainingRounds);
+                }
+            }
         }
 
-        // Hash once with SHA-256
-        transformedMasterKey = CryptoJS.SHA256(transformedMasterKey);
-
-        return transformedMasterKey;
+        doRounds(this.masterKey, keyEncRounds);
     };
 }());

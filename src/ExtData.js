@@ -59,10 +59,10 @@
                 eos = true;
                 break;
             default:
-                throw "";
+                throw S.error_unknown_field_type;
             }
             if (!result) {
-                throw "";
+                throw S.error_padding_data_mismatch;
             }
         }
     };
