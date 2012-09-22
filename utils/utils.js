@@ -28,11 +28,20 @@
     var KeePass = window.KeePass || {},
         U = KeePass.utils = KeePass.utils || {};
 
+    U.stringToByteArray = function(string) {
+    	return string.split('').map(function (i) {
+                return i.charCodeAt(0);
+            });
+    };
+
+    U.byteArrayToString = function (arr) {
+        return arr.map(String.fromCharCode).join('');
+    };
 
     U.byteArrayToWordArray = function (arr) {
         var words = [],
             i,
-            padding = 4 - (arr.length % 4),
+            padding = arr.length % 4 ? 4 - (arr.length % 4) : 0,
             byte1, byte2, byte3, byte4;
         for (i = 0; i < arr.length + padding; i += 4) {
             byte1 = arr[i];
@@ -45,8 +54,6 @@
     };
 
     U.wordArrayToByteArray = function (arr) {
-        return arr.toString(CryptoJS.enc.Latin1).split('').map(function (i) {
-            return i.charCodeAt(0);
-        });
+        return U.stringToByteArray(arr.toString(CryptoJS.enc.Latin1));
     };
 }());

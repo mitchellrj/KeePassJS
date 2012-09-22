@@ -40,7 +40,7 @@
             fieldSize = struct.Unpack('<I', data, pos += 2);
             pos += 4;
             if (fieldSize > 0) {
-                fieldData = data.slice(pos, pos + fieldSize);
+                fieldData = struct.Unpack('<' + fieldSize.toString() + 'A', data, pos);
             }
 
             switch (fieldType) {

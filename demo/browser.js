@@ -25,8 +25,7 @@
 (function ($) {
     "use strict";
     var KeePass = window.KeePass,
-        PERCENT_RE = /\b(\d{1,3})%/,
-        droppedFiles = [];
+        PERCENT_RE = /\b(\d{1,3})%/;
 
     $(function () {
         var opening = false,
@@ -35,7 +34,8 @@
         function readFiles(files, callback) {
             var reader = new FileReader(),
                 fileArray = [],
-                i;
+                i,
+                U = KeePass.utils;
 
             if (files.length !== 1) {
                 return false;
@@ -46,19 +46,30 @@
 
             function doRead(fileArray) {
                 $(reader).bind('loadend', function (ev) {
-                    var file = {
-                        name: fileArray[0].name,
-                        size: fileArray[0].size,
-                        type: fileArray[0].type,
-                        data: reader.result
-                    };
+                    var data, abv,
+                        file = {
+                            name: fileArray[0].name,
+                            size: fileArray[0].size,
+                            type: fileArray[0].type
+                        };
+                    if (reader.readAsArrayBuffer) {
+                        abv = new Uint8Array(reader.result);
+                        data = abv.subarray(0);
+                    } else {
+                        data = U.stringToByteArray(reader.result);
+                    }
+                    file.data = data;
                     callback(file);
                     fileArray.shift();
                     if (fileArray.length) {
                         doRead(fileArray);
                     }
                 });
-                reader.readAsBinaryString(fileArray[0]);
+                if (reader.readAsArrayBuffer) {
+                    reader.readAsArrayBuffer(fileArray[0]);
+                } else {
+                    reader.readAsBinaryString(fileArray[0]);
+                }
             }
 
             doRead(fileArray);
@@ -186,6 +197,7 @@
             var key = $('#password').val(),
                 diskDrive = !!$('#use_keyfile:checked').length,
                 providerName = 'KeePassJS',
+                keyPassFile = null,
                 manager = new KeePass.Manager(statusCallback);
 
             if (opening) {
@@ -195,13 +207,16 @@
             $('#open').attr('disabled', 'disabled');
 
             function loadWithKeyFile(keyFile) {
+                window.addEventListener('keePassDatabaseKeySet', function () {
+                        manager.open(keyPassFile.data);
+                    });
                 readFiles($('#keepassfile').get(0).files, function (file) {
+                    keyPassFile = file;
                     manager.setMasterKey(
                     key,
                     diskDrive,
                     keyFile,
                     providerName);
-                    manager.open(file.data);
                 });
             }
 

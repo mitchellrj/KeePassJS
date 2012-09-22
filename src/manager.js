@@ -15,7 +15,7 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 /*jslint nomen: true, white: true, browser: true */
-/*global CryptoJS: true, Base64: true */
+/*global Base64: true */
 (function () {
     "use strict";
 
@@ -23,6 +23,7 @@
         U = KeePass.utils || {},
         S = KeePass.strings || {},
         E = KeePass.events || {},
+        crypto = KeePass.crypto,
         Database = KeePass.Database,
         isBase64UrlString = (new RegExp('^base64:\/\/')).test,
         C = KeePass.constants || {},
@@ -33,8 +34,8 @@
         this.statusCallback = statusCallback;
     };
 
-    function loadHexKey(string) {
-        var i, result = [];
+    function loadHexKey(byteArray) {
+        var i, result = [], string = U.byteArrayToString(byteArray);
         for (i = 0; i < 32; i += 2) {
             result.push(parseInt(string.slice(i, 2), 16));
         }
@@ -42,46 +43,71 @@
     }
 
     Manager.prototype.status = function(message) {
-	var $this = this;
-	if (this.statusCallback) {
-	    // fork
-	    $this.statusCallback(message);
-	    //window.setTimeout(function() {}, 0);
-	}
+    	var $this = this;
+    	if (this.statusCallback) {
+    	    // fork
+    	    $this.statusCallback(message);
+    	    //window.setTimeout(function() {}, 0);
+    	}
     };
 
     Manager.prototype.setMasterKey = function (key, diskDrive, keyFile, providerName) {
-        var fileSize, fileKey = '', fileData,
-            passwordKey, readNormal, extKey, keySourceCand;
+        var fileSize, fileData, self = this, readNormal, extKey, keySourceCand,
+            finalizeKeyWithKeyFile = function(fileKey) {
+                crypto.SHA256(key, function (ev) {
+                    var passwordKey = ev.target.result;
+                    crypto.SHA256(passwordKey.concat(fileKey), function (ev) {
+                        self.masterKey = ev.target.result;
+                        self.status(null);
+                        E.fireDatabaseKeySet(self);
+                    });
+                });
+            };
 
+        key = U.stringToByteArray(key);
         if (key.length === 0) {
             this.status(null);
+            E.fireDatabaseKeySetError(self, S.error_invalid_key);
             throw S.error_invalid_key;
         }
 
         this.status(S.creating_key);
 
         if (!diskDrive) {
-            this.masterKey = CryptoJS.SHA256(CryptoJS.enc.Latin1.parse(key));
+            crypto.SHA256(key, function (ev) {
+                self.masterKey = ev.target.result;
+                self.status(null);
+                E.fireDatabaseKeySet(self);
+            });
         } else if (isBase64UrlString(keyFile.name)) {
             extKey = Base64.decode(keyFile.name.slice(9));
             if (extKey) {
-                fileKey = CryptoJS.SHA256(extKey);
+                crypto.SHA256(extKey, function (ev) {
+                    var fileKey = ev.target.result;
+                    if (providerName !== null && providerName !== undefined) {
+                        self.keySource = providerName;
+                    }
+                    if (key === null) { // external source only
+                        self.masterKey = fileKey;
+                        self.status(null);
+                        E.fireDatabaseKeySet(self);
+                    } else {
+                        crypto.SHA256(key, function(ev) {
+                            var passwordKey = ev.target.result;
+                            crypto.SHA256(passwordKey.concat(fileKey), function (ev) {
+                                self.masterKey = ev.target.result;
+                                self.status(null);
+                                E.fireDatabaseKeySet(self);
+                            });
+                        });
+                    }
+                });
             } else {
                 this.status(null);
+                E.fireDatabaseKeySetError(self, S.error_invalid_key);
                 throw S.error_invalid_key;
             }
 
-            if (providerName !== null && providerName !== undefined) {
-                this.keySource = providerName;
-            }
-
-            if (key === null) { // external source only
-                this.masterKey = fileKey;
-            } else {
-                passwordKey = CryptoJS.SHA256(key);
-                this.masterKey = CryptoJS.SHA256(passwordKey.concat(fileKey));
-            }
         } else {
             // with key file
             if (key === null) { // key file only
@@ -101,9 +127,16 @@
                     readNormal = false;
                 }
                 if (readNormal) {
-                    this.masterKey = CryptoJS.SHA256(fileData);
+                    crypto.SHA256(fileData, function (ev) {
+                        self.masterKey = ev.target.result;
+                        self.keySource = keySourceCand;
+                        self.status(null);
+                        E.fireDatabaseKeySet(self);
+                    });
+                } else {
+                    this.status(null);
+                    E.fireDatabaseKeySet(self);
                 }
-                this.keySource = keySourceCand;
             } else { // secondKey != null
                 keySourceCand = keyFile.name;
                 if (keySourceCand.charAt(keySourceCand.length - 1) === '\\') {
@@ -122,11 +155,13 @@
                 }
 
                 if (readNormal) {
-                    fileKey = CryptoJS.SHA256(fileData);
+                    crypto.SHA256(fileData, function (ev) {
+                        var fileKey = ev.target.result;
+                        finalizeKeyWithKeyFile(fileKey);
+                    });
+                } else {
+                    finalizeKeyWithKeyFile(fileKey);
                 }
-
-                passwordKey = CryptoJS.SHA256(key);
-                this.masterKey = CryptoJS.SHA256(passwordKey.concat(fileKey));
             }
         }
         this.status(null);
@@ -143,39 +178,43 @@
     };
 
     Manager.prototype._transformMasterKey = function (keySeed, keyEncRounds, callback) {
-        var lastPercentage = 0, percentage, self = this;
-
-        this.status(S.transforming_key.replace('%d', 0));
-
-        function doRounds(transformedMasterKey, remainingRounds) {
+        var lastPercentage = 0, percentage, self = this,
+            remainingRounds = keyEncRounds,
+            transformedMasterKey = this.masterKey;
+        function nextRound(ev) {
             var allowUpdate = false;
-            transformedMasterKey = CryptoJS.AES.encrypt(transformedMasterKey,
-                    keySeed, {
-                        mode: CryptoJS.mode.ECB
-                    }).ciphertext;
-                    transformedMasterKey = CryptoJS.lib.WordArray.create(transformedMasterKey.words.slice(0, 8));
-                    percentage = Math.round((keyEncRounds - remainingRounds) / keyEncRounds * 100);
-                    if (percentage != lastPercentage) {
-                	allowUpdate = true;
-                        self.status(S.transforming_key.replace('%d', percentage));
-                        lastPercentage = percentage;
-                    }
+            transformedMasterKey = ev.target.result;
             remainingRounds -= 1;
             if (remainingRounds === 0) {
                 // Hash once with SHA-256
-                transformedMasterKey = CryptoJS.SHA256(transformedMasterKey);
-                self.status(null);
-                callback(transformedMasterKey);
+                crypto.SHA256(transformedMasterKey, function (ev) {
+                    self.status(null);
+                    callback(ev.target.result);
+                });
             } else {
+                percentage = Math.round((keyEncRounds - remainingRounds) / keyEncRounds * 100);
+                if (percentage != lastPercentage) {
+                    allowUpdate = true;
+                    self.status(S.transforming_key.replace('%d', percentage));
+                    lastPercentage = percentage;
+                }
                 if (allowUpdate) {
                     // timeout to let DOM update
-                    window.setTimeout(function() { doRounds(transformedMasterKey, remainingRounds);}, 0);
+                    window.setTimeout(function() { doRound(transformedMasterKey, remainingRounds);}, 0);
                 } else {
-                    doRounds(transformedMasterKey, remainingRounds);
+                    doRound(transformedMasterKey, remainingRounds);
                 }
             }
         }
+        function doRound (transformedMasterKey) {
+            crypto.encryptAESECB(
+                keySeed,
+                transformedMasterKey,
+                nextRound);
+        }
 
-        doRounds(this.masterKey, keyEncRounds);
+        this.status(S.transforming_key.replace('%d', 0));
+
+        doRound(transformedMasterKey);
     };
 }());

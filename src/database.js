@@ -15,15 +15,15 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 /*jslint bitwise: true, nomen: true, unparam: true, todo: true, white: true, browser: true */
-/*global struct: true, CryptoJS: true */
+/*global struct: true */
 (function () {
     "use strict";
 
     var KeePass = window.KeePass = window.KeePass || {},
         C = KeePass.constants || {},
-        U = KeePass.utils || {},
         S = KeePass.strings || {},
         E = KeePass.events || {},
+        U = KeePass.utils || {},
         Group = KeePass.Group,
         Entry = KeePass.Entry,
         ExtData = KeePass.ExtData,
@@ -49,97 +49,66 @@
         this.subGroups.push(group);
     };
 
-    Database.prototype._decryptWithTransformedKey = function(transformedMasterKey, data) {
-	var finalKey, cipherParams, encryptedPart, decryptedPart, fieldType, fieldSize,
-	    decryptedPartByteArray, headerHash, lastGroupLevel, lastGroup = this,
-	    group, entry, currentGroup, currentEntry, pos = 0;
+    Database.prototype._validateAndParse = function (decryptedPartByteArray) {
+        var self = this;
 
-        if (!transformedMasterKey) {
-            throw S.error_failed_to_open;
-        }
-
-        // Hash the master password with the salt in the file
-        finalKey = CryptoJS.SHA256(this.masterSeed.concat(transformedMasterKey));
-
-        if ((data.length - C.HEADER_SIZE) % 16 !== 0) {
-            throw S.error_bad_file_size;
-        }
-
-        this.manager.status(S.decrypting_db);
-        encryptedPart = CryptoJS.enc.Latin1.parse(data.slice(C.HEADER_SIZE));
-
-        if (this.algorithm === C.ALGO_AES) {
-            // Decrypt! The first bytes aren't encrypted (that's the header)
-            cipherParams = CryptoJS.lib.CipherParams.create({
-                ciphertext: encryptedPart,
-                key: finalKey,
-                mode: CryptoJS.mode.CBC,
-                iv: this.encryptionIV,
-                padding: CryptoJS.pad.Pkcs7,
-                algorithm: CryptoJS.algo.AES
-            });
-            decryptedPart = CryptoJS.AES.decrypt(cipherParams,
-            finalKey, {
-                mode: CryptoJS.mode.CBC,
-                iv: this.encryptionIV,
-                padding: CryptoJS.pad.Pkcs7
-            });
-        } else if (this.algorithm === C.ALGO_TWOFISH) {
-            cipherParams = CryptoJS.lib.CipherParams.create({
-                ciphertext: encryptedPart,
-                key: finalKey,
-                mode: CryptoJS.mode.CBC,
-                iv: this.encryptionIV,
-                padding: CryptoJS.pad.Pkcs7,
-                algorithm: CryptoJS.algo.AES
-            });
-            decryptedPart = CryptoJS.TwoFish.decrypt(cipherParams,
-            finalKey, {
-                mode: CryptoJS.mode.CBC,
-                iv: this.encryptionIV,
-                padding: CryptoJS.pad.Pkcs7
-            });
-        } else {
-            this.manager.status(null);
-            throw S.error_failed_to_open;
-        }
-
-        if (decryptedPart.words.length > 2147483446 || (decryptedPart.words.length === 0 && (groupCount !== 0 || entryCount !== 0))) {
-            this.manager.status(null);
+        if (decryptedPartByteArray.length > 2147483446 || (decryptedPartByteArray.length === 0 && (groupCount !== 0 || entryCount !== 0))) {
+            self.manager.status(null);
+            E.fireDatabaseOpenError(self.manager, S.error_invalid_key);
             throw S.error_invalid_key;
         }
 
-        this.manager.status(S.verifying_contents);
-
-        decryptedPartByteArray = U.wordArrayToByteArray(decryptedPart);
+        self.manager.status(S.verifying_contents);
 
         /* TODO: something seems to go wrong in the last 4 bytes of
          * decryption. Enable this again once decryption fixed.
-         * if (this.contentsHash != CryptoJS.SHA256(decryptedPart)) {
-            throw "Invalid key.";
-        }*/
+         * crypto.SHA256(decryptedPartByteArray, function (ev) {
+         *     var thisContentsHash = ev.target.result;
+         *
+         *     if (this.contentsHash != CryptoJS.SHA256(decryptedPart)) {
+         *         self.manager.status(null);
+         *         E.fireDatabaseOpenError(self.manager, S.error_invalid_key);
+         *         throw S.error_invalid_key;
+         *     }
+         *     self._prepareDecryptedData(decryptedPartByteArray);
+         * });
+         */
 
-        this.manager.status(S.loading_contents);
+        self._prepareDecryptedData(decryptedPartByteArray);
 
-        function _hashHeader(data) {
-            // SHA256 of header - encryption IV, group count, entry count & contents hash
-            var headerSize = 124,
-                endCount = 32 + 4, // masterSeed2 + keyEncRounds
-                startCount = headerSize - endCount - 32, // signature1, signature2, flags, version, masterSeed
-                toHash = data.slice(0, startCount) + data.slice(headerSize - endCount, endCount);
+    };
 
-            return CryptoJS.SHA256(CryptoJS.enc.Latin1.parse(toHash)).toString(CryptoJS.enc.Latin1).slice(0, 32);
-        }
+    Database.prototype._prepareDecryptedData = function (decryptedPartByteArray) {
+        var self = this,
+            toHash = struct.Pack('<4I16A32AI',
+                                 self.signature1,
+                                 self.signature2,
+                                 self.flags,
+                                 self.versions,
+                                 self.masterSeed,
+                                 self.masterSeed2,
+                                 self.keyEncRounds);
+        self.manager.status(S.loading_contents);
 
-        headerHash = _hashHeader(data);
-        this.extData = new ExtData(headerHash);
+        crypto.SHA256(toHash, function (ev) {
+            var headerHash = ev.target.result;
+            self.extData = new ExtData(headerHash);
+
+            self._parseDecryptedFile(decryptedPartByteArray);
+        });
+
+    };
+
+    Database.prototype._parseDecryptedFile = function (decryptedPartByteArray) {
+        var fieldType, fieldSize, lastGroupLevel, lastGroup = this,
+        group, entry, currentGroup, currentEntry, pos = 0, self = this;
 
         lastGroupLevel = currentGroup = pos = 0;
         group = new Group({
-            database: this,
-            parent: this
+            database: self,
+            parent: self
         });
-        while (currentGroup < this.groupCount) {
+        while (currentGroup < self.groupCount) {
             fieldType = struct.Unpack('<H', decryptedPartByteArray, pos)[0];
             pos += 2;
             fieldSize = struct.Unpack('<I', decryptedPartByteArray, pos)[0];
@@ -149,7 +118,7 @@
 
             if (fieldType === 0xFFFF) {
                 currentGroup += 1;
-                this.groups[group.id] = group;
+                self.groups[group.id] = group;
                 if (group.level <= lastGroupLevel) {
                     while (lastGroup && lastGroup.level >= group.level) {
                         lastGroup = lastGroup.parent;
@@ -162,7 +131,7 @@
                 lastGroupLevel = group.level;
                 lastGroup = group;
                 group = new Group({
-                    database: this
+                    database: self
                 });
             }
 
@@ -171,9 +140,9 @@
 
         currentEntry = 0;
         entry = new Entry({
-            database: this
+            database: self
         });
-        while (currentEntry < this.entryCount) {
+        while (currentEntry < self.entryCount) {
             fieldType = struct.Unpack('<H', decryptedPartByteArray, pos)[0];
             pos += 2;
             fieldSize = struct.Unpack('<I', decryptedPartByteArray, pos)[0];
@@ -182,38 +151,88 @@
 
             if (fieldType === 0xFFFF) {
                 currentEntry += 1;
-                this.entries[entry.uuid] = entry;
-                this.groups[entry.groupId].addEntry(entry);
+                self.entries[entry.uuid] = entry;
+                self.groups[entry.groupId].addEntry(entry);
                 entry = new Entry({
-                    database: this
+                    database: self
                 });
             }
 
             pos += fieldSize;
         }
 
-        this.manager.status(null);
-	E.fireDatabaseOpened(this.manager);
+        self.manager.status(null);
+        E.fireDatabaseOpened(self.manager);
     };
 
-    Database.prototype.read = function (data) {
-        var dataByteArray = data.split('').map(function (i) {
-                return i.charCodeAt(0);
-            }),
-            self = this,
-            header = struct.Unpack('<4I16A16A2I32A32AI', dataByteArray, 0);
+    Database.prototype._decryptWithTransformedKey = function(transformedMasterKey, dataByteArray) {
+    	var cipherParams,
+    	    encryptedPart = dataByteArray.subarray ? dataByteArray.subarray(C.HEADER_SIZE) : dataByteArray.slice(C.HEADER_SIZE),
+    	    self = this;
 
-        this.groupCount = header[6];
-        this.entryCount = header[7];
-        this.contentsHash = U.byteArrayToWordArray(header[8]);
-        this.signature1 = header[0];
-        this.signature2 = header[1];
-        this.flags = header[2];
-        this.version = header[3];
-        this.masterSeed = U.byteArrayToWordArray(header[4]);
-        this.encryptionIV = U.byteArrayToWordArray(header[5]);
-        this.masterSeed2 = U.byteArrayToWordArray(header[9]);
-        this.keyEncryptionRounds = header[10];
+        if (!transformedMasterKey) {
+            E.fireDatabaseOpenError(self.manager, S.error_failed_to_open);
+            throw S.error_failed_to_open;
+        }
+
+        // Hash the master password with the salt in the file
+        crypto.SHA256(self.masterSeed.concat(transformedMasterKey), function(ev) {
+            var finalKey = ev.target.result, decryptedPart, decryptedPartByteArray;
+
+            if ((dataByteArray.length - C.HEADER_SIZE) % 16 !== 0) {
+                E.fireDatabaseOpenError(self.manager, S.error_bad_file_size);
+                throw S.error_bad_file_size;
+            }
+
+            self.manager.status(S.decrypting_db);
+
+            if (self.algorithm === C.ALGO_AES) {
+                // Decrypt! The first bytes aren't encrypted (that's the header)
+                crypto.decryptAESCBC(encryptedPart, function (ev) {
+                    var decryptedPartByteArray = ev.target.result;
+                    self._validateAndParse(decryptedPartByteArray);
+                });
+            } else if (self.algorithm === C.ALGO_TWOFISH) {
+                cipherParams = CryptoJS.lib.CipherParams.create({
+                    ciphertext: U.byteArrayToWordArray(encryptedPart),
+                    key: U.byteArrayToWordArray(finalKey),
+                    mode: CryptoJS.mode.CBC,
+                    iv: U.byteArrayToWordArray(self.encryptionIV),
+                    padding: CryptoJS.pad.Pkcs7,
+                    algorithm: CryptoJS.algo.AES
+                });
+                decryptedPart = CryptoJS.TwoFish.decrypt(cipherParams,
+                finalKey, {
+                    mode: CryptoJS.mode.CBC,
+                    iv: U.byteArrayToWordArray(self.encryptionIV),
+                    padding: CryptoJS.pad.Pkcs7
+                });
+
+                decryptedPartByteArray = U.wordArrayToByteArray(decryptedPart);
+                self._validateAndParse(decryptedPartByteArray);
+            } else {
+                self.manager.status(null);
+                E.fireDatabaseOpenError(self.manager, S.error_failed_to_open);
+                throw S.error_failed_to_open;
+            }
+        });
+    };
+
+    Database.prototype.read = function (dataByteArray) {
+        var self = this;
+
+        this.header = struct.Unpack('<4I16A16A2I32A32AI', dataByteArray, 0);
+        this.groupCount = this.header[6];
+        this.entryCount = this.header[7];
+        this.contentsHash = this.header[8];
+        this.signature1 = this.header[0];
+        this.signature2 = this.header[1];
+        this.flags = this.header[2];
+        this.version = this.header[3];
+        this.masterSeed = this.header[4];
+        this.encryptionIV = this.header[5];
+        this.masterSeed2 = this.header[9];
+        this.keyEncryptionRounds = this.header[10];
 
         if (this.signature1 === C.PWM_DBSIG_1_KDBX_P && this.signature2 === C.PWM_DBSIG_2_KDBX_P) {
             throw S.error_unsupported_file;
@@ -254,7 +273,7 @@
 
         // Generate pTransformedMasterKey from pMasterKey
         this.manager._transformMasterKey(this.masterSeed2, this.keyEncryptionRounds, function (transformedMasterKey) {
-            self._decryptWithTransformedKey(transformedMasterKey, data);
+            self._decryptWithTransformedKey(transformedMasterKey, dataByteArray);
         });
     };
 }());
