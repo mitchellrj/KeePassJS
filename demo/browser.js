@@ -74,7 +74,12 @@
         }
 
         function createEntry(entry) {
-            var entryMarkup = $('<tr><td class="title"><a href="' + entry.url + '">' + entry.title + '</a></td><td class="userName">' + entry.userName + '</td><td class="password"><span>' + pwMask(entry.password.length) + '</span>' + passwordToggle + '</td><td class="notes"><pre>' + entry.additional + '</pre></td></tr>');
+            var binary = (
+                    entry.binaryData ?
+                    '<a href="data:application/octet-stream;base64,' + encodeURIComponent((window.btoa || base64.encode)(entry.binaryData)) + '">' + (entry.binaryDescription || 'Attached file') + '</a>' :
+                    ''
+                    ),
+                entryMarkup = $('<tr><td class="title"><a href="' + entry.url + '">' + entry.title + '</a></td><td class="userName">' + entry.userName + '</td><td class="password"><span>' + pwMask(entry.password.length) + '</span>' + passwordToggle + '</td><td class="notes"><pre>' + entry.additional + '</pre></td><td>' + binary + '</td></tr>');
             entryMarkup.find('.password-toggle').click(function (ev) {
         	ev.preventDefault();
                 var $this = $(this),
@@ -108,7 +113,7 @@
             container.append(l);
             for (g = 0; g < groups.length; g += 1) {
                 groupMarkup = $('<li><a class="group-name" href="#">' + groups[g].name + '</a></li>');
-                entriesContainer = $('<table class="entries"><thead><tr><th class="title">Title</th><th class="userName">Username</th><th class="password">Password</th><th class="notes">Notes</th></tr></thead></table>');
+                entriesContainer = $('<table class="entries"><thead><tr><th class="title">Title</th><th class="userName">Username</th><th class="password">Password</th><th class="notes">Notes</th><th class="attachment">Attachment</th></tr></thead></table>');
 
                 for (e in groups[g].entries) {
                     if (groups[g].entries.hasOwnProperty(e) && !doNotDisplay(groups[g].entries[e])) {
