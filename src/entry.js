@@ -98,7 +98,7 @@
             this.binaryDescription = struct.Unpack(fmt, decryptedPart, pos)[0];
             break;
         case 0x000E:
-            fmt = '<' + fieldSize.toString() + 'A';
+            fmt = '<' + fieldSize.toString() + 's';
             this.binaryData = struct.Unpack(fmt, decryptedPart, pos)[0];
             break;
         case 0xFFFF:
