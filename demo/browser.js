@@ -76,7 +76,7 @@
         function createEntry(entry) {
             var binary = (
                     entry.binaryData ?
-                    '<a href="data:application/octet-stream;base64,' + encodeURIComponent((window.btoa || base64.encode)(entry.binaryData)) + '">' + (entry.binaryDescription || 'Attached file') + '</a>' :
+                    '<a href="data:application/octet-stream;base64,' + encodeURIComponent((window.btoa || base64.encode)(entry.binaryData)) + '"' + (entry.binaryDescription ? ' download="' + encodeURIComponent(entry.binaryDescription) + '"' : '') + '>' + (entry.binaryDescription || 'Attached file') + '</a>' :
                     ''
                     ),
                 entryMarkup = $('<tr><td class="title"><a href="' + entry.url + '">' + entry.title + '</a></td><td class="userName">' + entry.userName + '</td><td class="password"><span>' + pwMask(entry.password.length) + '</span>' + passwordToggle + '</td><td class="notes"><pre>' + entry.additional + '</pre></td><td>' + binary + '</td></tr>');
