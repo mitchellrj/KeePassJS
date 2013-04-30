@@ -178,7 +178,9 @@
             pos += 2;
             fieldSize = struct.Unpack('<I', decryptedPartByteArray, pos)[0];
             pos += 4;
-            entry.addField(fieldType, fieldSize, decryptedPartByteArray, pos);
+            if (fieldSize) {
+                entry.addField(fieldType, fieldSize, decryptedPartByteArray, pos);
+            }
 
             if (fieldType === 0xFFFF) {
                 currentEntry += 1;
