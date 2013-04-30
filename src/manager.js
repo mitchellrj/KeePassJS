@@ -15,7 +15,7 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 /*jslint nomen: true, white: true, browser: true */
-/*global CryptoJS: true, Base64: true */
+/*global CryptoJS: true, base64: true */
 (function () {
     "use strict";
 
@@ -64,7 +64,7 @@
         if (!diskDrive) {
             this.masterKey = CryptoJS.SHA256(CryptoJS.enc.Latin1.parse(key));
         } else if (isBase64UrlString(keyFile.name)) {
-            extKey = Base64.decode(keyFile.name.slice(9));
+            extKey = (window.atob || base64.decode)(keyFile.name.slice(9));
             if (extKey) {
                 fileKey = CryptoJS.SHA256(extKey);
             } else {
