@@ -21,6 +21,7 @@
     // Random data to pad the file out to prevent guessing attacks
 
     var KeePass = window.KeePass = window.KeePass || {},
+        S = KeePass.strings = KeePass.strings || {},
         ExtData = KeePass.ExtData = function (headerHash) {
         this.headerHash = headerHash;
     };
