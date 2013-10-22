@@ -37,11 +37,13 @@
             fieldData = '';
 
         while (!eos) {
-            fieldType = struct.Unpack('<H', data, pos);
-            fieldSize = struct.Unpack('<I', data, pos += 2);
+            fieldType = struct.Unpack('<H', data, pos)[0];
+            fieldSize = struct.Unpack('<I', data, pos += 2)[0];
             pos += 4;
             if (fieldSize > 0) {
-                fieldData = data.slice(pos, pos + fieldSize);
+                fieldData = struct.Unpack('<' + fieldSize.toString() + 's',
+                                          data, pos)[0];
+                pos += fieldSize;
             }
 
             switch (fieldType) {
