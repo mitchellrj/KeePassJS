@@ -122,13 +122,14 @@
         this.manager.status(S.loading_contents);
 
         function _hashHeader(data) {
-            // SHA256 of header - encryption IV, group count, entry count & contents hash
-            var headerSize = 124,
+            // SHA256 of header - excluding the contents hash
+            var headerSize = 124, // (bytes)
                 endCount = 32 + 4, // masterSeed2 + keyEncRounds
-                startCount = headerSize - endCount - 32, // signature1, signature2, flags, version, masterSeed
-                toHash = data.slice(0, startCount) + data.slice(headerSize - endCount, endCount);
+                startCount = headerSize - endCount - 32, // signature1, signature2, flags, version, masterSeed, IV, group count, entry count
+                toHash = data.slice(0, startCount) + data.slice(headerSize - endCount, headerSize),
+                hashWords = CryptoJS.SHA256(CryptoJS.enc.Latin1.parse(toHash));
 
-            return CryptoJS.SHA256(CryptoJS.enc.Latin1.parse(toHash)).toString(CryptoJS.enc.Latin1).slice(0, 32);
+            return hashWords.toString(CryptoJS.enc.Latin1).slice(0, 32);
         }
 
         headerHash = _hashHeader(data);
