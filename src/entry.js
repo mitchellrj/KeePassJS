@@ -103,9 +103,11 @@
             break;
         case 0xFFFF:
             if (fieldSize !== 0) {
-                throw S.error_unknown_field_type;
+                throw new KeePass.Exception(S.error_unknown_field_type);
             }
             break;
+        default:
+            throw new KeePass.Exception(S.error_unknown_field_type);
         }
     };
 }());

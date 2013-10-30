@@ -24,7 +24,8 @@
         S = KeePass.strings || {},
         E = KeePass.events || {},
         Database = KeePass.Database,
-        isBase64UrlString = (new RegExp('^base64:\/\/')).test,
+        _isBase64UrlStringPattern = /^base64:\/\//,
+        isBase64UrlString = function (str) { return _isBase64UrlStringPattern.test(str); },
         C = KeePass.constants || {},
         Manager = KeePass.Manager = function (statusCallback) {
         this.masterKey = '';
@@ -32,6 +33,10 @@
         this.database = null;
         this.statusCallback = statusCallback;
     };
+
+    function exceptionHandler(manager, e) {
+        E.fireDatabaseOpenError(manager, e);
+    }
 
     function loadHexKey(string) {
         var i, result = [];
@@ -56,7 +61,7 @@
 
         if (key.length === 0) {
             this.status(null);
-            throw S.error_invalid_key;
+            throw new KeePass.Exception(S.error_invalid_key);
         }
 
         this.status(S.creating_key);
@@ -69,7 +74,7 @@
                 fileKey = CryptoJS.SHA256(extKey);
             } else {
                 this.status(null);
-                throw S.error_invalid_key;
+                throw new KeePass.Exception(S.error_invalid_key);
             }
 
             if (providerName !== null && providerName !== undefined) {
@@ -79,7 +84,7 @@
             if (key === null) { // external source only
                 this.masterKey = fileKey;
             } else {
-                passwordKey = CryptoJS.SHA256(key);
+                passwordKey = CryptoJS.SHA256(CryptoJS.enc.Latin1.parse(key));
                 this.masterKey = CryptoJS.SHA256(passwordKey.concat(fileKey));
             }
         } else {
@@ -125,7 +130,7 @@
                     fileKey = CryptoJS.SHA256(fileData);
                 }
 
-                passwordKey = CryptoJS.SHA256(key);
+                passwordKey = CryptoJS.SHA256(CryptoJS.enc.Latin1.parse(key));
                 this.masterKey = CryptoJS.SHA256(passwordKey.concat(fileKey));
             }
         }
@@ -137,13 +142,16 @@
 	    this.database = new Database(this);
 	    this.database.read(data);
 	} catch (e) {
-	    E.fireDatabaseOpenError(this, e);
+	    exceptionHandler(this, e);
 	    throw e;
 	}
     };
 
-    Manager.prototype._transformMasterKey = function (keySeed, keyEncRounds, callback) {
+    Manager.prototype._transformMasterKey = function (keySeed, keyEncRounds, callback, errorCallback) {
         var lastPercentage = 0, percentage, self = this;
+        if (!errorCallback) {
+            errorCallback = function (e) { exceptionHandler(self, e); };
+        }
 
         this.status(S.transforming_key.replace('%d', 0));
 
@@ -156,7 +164,7 @@
                     transformedMasterKey = CryptoJS.lib.WordArray.create(transformedMasterKey.words.slice(0, 8));
                     percentage = Math.round((keyEncRounds - remainingRounds) / keyEncRounds * 100);
                     if (percentage != lastPercentage) {
-                	allowUpdate = true;
+                        allowUpdate = true;
                         self.status(S.transforming_key.replace('%d', percentage));
                         lastPercentage = percentage;
                     }
@@ -169,13 +177,29 @@
             } else {
                 if (allowUpdate) {
                     // timeout to let DOM update
-                    window.setTimeout(function() { doRounds(transformedMasterKey, remainingRounds);}, 0);
+                    window.setTimeout(function () {
+                        try {
+                            doRounds(transformedMasterKey, remainingRounds);
+                        } catch (e) {
+                            if (errorCallback) {
+                                errorCallback(e);
+                            }
+                            throw e;
+                        }
+                    }, 0);
                 } else {
                     doRounds(transformedMasterKey, remainingRounds);
                 }
             }
         }
 
-        doRounds(this.masterKey, keyEncRounds);
+        try {
+            doRounds(this.masterKey, keyEncRounds);
+        } catch (e) {
+            if (errorCallback) {
+                errorCallback(e);
+            }
+            throw e;
+        }
     };
 }());

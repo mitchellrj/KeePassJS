@@ -62,10 +62,10 @@
                 eos = true;
                 break;
             default:
-                throw S.error_unknown_field_type;
+                throw new KeePass.Exception(S.error_unknown_field_type);
             }
             if (!result) {
-                throw S.error_padding_data_mismatch;
+                throw new KeePass.Exception(S.error_padding_data_mismatch);
             }
         }
     };

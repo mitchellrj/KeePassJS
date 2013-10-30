@@ -28,22 +28,22 @@
         Entry = KeePass.Entry,
         ExtData = KeePass.ExtData,
         Database = KeePass.Database = function (manager) {
-        this.manager = manager;
-        this.algorithm = null;
-        this.groupCount = 0;
-        this.groups = {};
-        this.subGroups = [];
-        this.entries = {};
-        this.extData = null;
-        this.signature1 = 0x0000;
-        this.signature2 = 0x0000;
-        this.flags = 0x000;
-        this.version = 0x000;
-        this.masterSeed = '';
-        this.encryptionIV = '';
-        this.masterSeed2 = '';
-        this.keyEncryptionRounds = 0x0000;
-    };
+            this.manager = manager;
+            this.algorithm = null;
+            this.groupCount = 0;
+            this.groups = {};
+            this.subGroups = [];
+            this.entries = {};
+            this.extData = null;
+            this.signature1 = 0x0000;
+            this.signature2 = 0x0000;
+            this.flags = 0x000;
+            this.version = 0x000;
+            this.masterSeed = '';
+            this.encryptionIV = '';
+            this.masterSeed2 = '';
+            this.keyEncryptionRounds = 0x0000;
+        };
 
     Database.prototype.addGroup = function (group) {
         this.subGroups.push(group);
@@ -55,14 +55,14 @@
 	    group, entry, currentGroup, currentEntry, pos = 0;
 
         if (!transformedMasterKey) {
-            throw S.error_failed_to_open;
+            throw new KeePass.Exception(S.error_failed_to_open);
         }
 
         // Hash the master password with the salt in the file
         finalKey = CryptoJS.SHA256(this.masterSeed.concat(transformedMasterKey));
 
         if ((data.length - C.HEADER_SIZE) % 16 !== 0) {
-            throw S.error_bad_file_size;
+            throw new KeePass.Exception(S.error_bad_file_size);
         }
 
         this.manager.status(S.decrypting_db);
@@ -101,23 +101,21 @@
             });
         } else {
             this.manager.status(null);
-            throw S.error_failed_to_open;
+            throw new KeePass.Exception(S.error_unknown_encryption_type);
         }
 
         if (decryptedPart.words.length > 2147483446 || (decryptedPart.words.length === 0 && (groupCount !== 0 || entryCount !== 0))) {
             this.manager.status(null);
-            throw S.error_invalid_key;
+            throw new KeePass.Exception(S.error_invalid_key);
         }
 
         this.manager.status(S.verifying_contents);
 
         decryptedPartByteArray = U.wordArrayToByteArray(decryptedPart);
 
-        /* TODO: something seems to go wrong in the last 4 bytes of
-         * decryption. Enable this again once decryption fixed.
-         * if (this.contentsHash != CryptoJS.SHA256(decryptedPart)) {
-            throw "Invalid key.";
-        }*/
+        if (this.contentsHash != CryptoJS.SHA256(decryptedPart)) {
+            throw new KeePass.Exception(S.error_invalid_key);
+        }
 
         this.manager.status(S.loading_contents);
 
@@ -219,13 +217,13 @@
         this.keyEncryptionRounds = header[10];
 
         if (this.signature1 === C.PWM_DBSIG_1_KDBX_P && this.signature2 === C.PWM_DBSIG_2_KDBX_P) {
-            throw S.error_unsupported_file;
+            throw new KeePass.Exception(S.error_unsupported_file);
         }
         if (this.signature1 === C.PWM_DBSIG_1_KDBX_R && this.signature2 === C.PWM_DBSIG_2_KDBX_R) {
-            throw S.error_unsupported_file;
+            throw new KeePass.Exception(S.error_unsupported_file);
         }
         if (this.signature1 !== C.PWM_DBSIG_1 && this.signature2 !== C.PWM_DBSIG_2) {
-            throw S.error_bad_signature;
+            throw new KeePass.Exception(S.error_bad_signature);
         }
         if ((this.version & 0xFFFFFF00) !== (C.PWM_DBVER_DW & 0xFFFFFF00)) {
             // Design decision: I'm not going to support this antiquated crap.
@@ -239,11 +237,11 @@
             } else {
                 throw "Failed to open database.";
             }*/
-            throw S.error_unsupported_version;
+            throw new KeePass.Exception(S.error_unsupported_version);
         }
 
         if (this.groupCount === 0) {
-            throw S.error_empty_db;
+            throw new KeePass.Exception(S.error_empty_db);
         }
 
         // Select algorithm
@@ -252,7 +250,7 @@
         } else if (this.flags & C.PWM_FLAG_TWOFISH) {
             this.algorithm = C.ALGO_TWOFISH;
         } else {
-            throw S.error_failed_to_open;
+            throw new KeePass.Exception(S.error_unknown_encryption_type);
         }
 
         // Generate pTransformedMasterKey from pMasterKey

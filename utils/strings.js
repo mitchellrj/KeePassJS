@@ -16,6 +16,7 @@
     S.error_unsupported_version = "Unsupported file version.";
     S.error_bad_signature = "Invalid file signature";
     S.error_unsupported_file = "Unsupported file.";
+    S.error_unknown_encryption_type = "Unknown encryption type.";
     S.error_unknown_field_type = "Unknown field type.";
     S.error_padding_data_mismatch = "Padding data mismatch";
 }());

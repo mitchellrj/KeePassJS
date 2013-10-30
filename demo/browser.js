@@ -191,13 +191,15 @@
             var key = $('#password').val(),
                 diskDrive = !!$('#use_keyfile:checked').length,
                 providerName = 'KeePassJS',
-                manager = new KeePass.Manager(statusCallback);
+                manager = new KeePass.Manager(statusCallback),
+                $errors = $('#errors');
 
             if (opening) {
                 return;
             }
             opening = true;
             $('#open').attr('disabled', 'disabled');
+            $errors.slideUp();
 
             function loadWithKeyFile(keyFile) {
                 readFiles($('#keepassfile').get(0).files, function (file) {
