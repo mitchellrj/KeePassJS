@@ -288,7 +288,7 @@
                     mX = [],
                     mY = [],
                     j;
-                k64Cnt = this._key.words.length / 2;
+                k64Cnt = this._key.sigBytes / 8;
 
                 // calculate the MDS matrix
 
